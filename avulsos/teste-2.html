@@ -1,0 +1,265 @@
+<!-- <!DOCTYPE html>
+<html lang="pt-br">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Borda que segue o mouse</title>
+
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body{
+    min-height: 100vh;
+    display: grid;
+    place-items: center;
+    background: #0f0f0f;
+    font-family: Arial, Helvetica, sans-serif;
+    color: #e5e5e5;
+  }
+
+  .card{
+    --x: 50%;
+    --y: 50%;
+    --borda: 2px;
+    --raio: 18px;
+
+    position: relative;
+    width: 420px;
+    padding: 24px;
+    border-radius: var(--raio);
+    background: #141414;
+    box-shadow: 0 12px 30px rgba(0,0,0,.45);
+    overflow: hidden;
+  }
+
+  /* Borda "apagada" base */
+  .card::before{
+    content:"";
+    position:absolute;
+    inset: 0;
+    border-radius: inherit;
+    border: var(--borda) solid rgba(255,255,255,.08);
+    pointer-events: none;
+  }
+
+  /* Brilho que aparece só perto do mouse */
+  .card::after{
+    content:"";
+    position:absolute;
+    inset: 0;
+    border-radius: inherit;
+    padding: var(--borda);
+
+    background:
+      radial-gradient(
+        160px circle at var(--x) var(--y),
+        rgba(124,58,237,.95),
+        rgba(124,58,237,.25) 45%,
+        transparent 70%
+      );
+
+    /* recorta pra virar SÓ BORDA */
+    -webkit-mask:
+      linear-gradient(#000 0 0) content-box,
+      linear-gradient(#000 0 0);
+    -webkit-mask-composite: xor;
+            mask-composite: exclude;
+
+    opacity: 0;
+    transition: opacity .12s ease;
+    pointer-events: none;
+  }
+
+  .card:hover::after{
+    opacity: 1;
+  }
+
+  .card h2{
+    font-size: 1.4rem;
+    margin-bottom: 8px;
+  }
+
+  .card p{
+    opacity: .8;
+    line-height: 1.3;
+  }
+</style>
+</head>
+
+<body>
+
+  <div class="card" id="card">
+    <h2>Janela reativa</h2>
+    <p>A borda clareia somente perto do mouse, acompanhando o cursor.</p>
+  </div>
+
+<script>
+  const card = document.getElementById("card");
+
+  card.addEventListener("mousemove", (e) => {
+    const r = card.getBoundingClientRect();
+    const x = e.clientX - r.left;
+    const y = e.clientY - r.top;
+
+    card.style.setProperty("--x", x + "px");
+    card.style.setProperty("--y", y + "px");
+  });
+</script>
+
+</body>
+</html> -->
+
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Borda reativa sem JS (por zonas)</title>
+
+<style>
+  :root{
+    --bg: #0f0f0f;
+    --card: #141414;
+    --text: #eaeaea;
+
+    --w: 520px;
+    --h: 140px;
+    --r: 22px;
+    --b: 3px;        /* espessura borda */
+    --glow: 180px;   /* “tamanho” do brilho */
+    --c: 255,255,255;/* cor do brilho (RGB) */
+  }
+
+  *{ margin:0; padding:0; box-sizing:border-box; }
+
+  body{
+    min-height:100vh;
+    display:grid;
+    place-items:center;
+    background:var(--bg);
+    font-family: Arial, Helvetica, sans-serif;
+    color:var(--text);
+  }
+
+  .card{
+    position:relative;
+    width: var(--w);
+    height: var(--h);
+    border-radius: var(--r);
+    background: var(--card);
+    box-shadow: 0 14px 40px rgba(0,0,0,.45);
+    overflow:hidden;
+  }
+
+  /* Conteúdo só pra ficar bonitinho */
+  .content{
+    position:absolute;
+    inset:0;
+    padding: 22px 26px;
+    display:flex;
+    flex-direction:column;
+    justify-content:center;
+    gap:6px;
+    z-index: 1;
+  }
+  .content h2{ font-size: 1.35rem; }
+  .content p{ opacity:.8; }
+
+  /* Borda base apagada */
+  .border-base{
+    position:absolute;
+    inset:0;
+    border-radius: inherit;
+    border: var(--b) solid rgba(255,255,255,.08);
+    pointer-events:none;
+    z-index: 2;
+  }
+
+  /* Camada do brilho (a “parte próxima” que clareia) */
+  .border-glow{
+    position:absolute;
+    inset:0;
+    border-radius: inherit;
+    border: var(--b) solid transparent;
+
+    /* Fundo do card + brilho na borda */
+    background:
+      linear-gradient(var(--card), var(--card)) padding-box,
+      radial-gradient(
+        var(--glow) circle at var(--px, 50%) var(--py, 50%),
+        rgba(var(--c), .95),
+        rgba(var(--c), .25) 45%,
+        transparent 70%
+      ) border-box;
+
+    opacity: 0;
+    transition: opacity .12s ease;
+    pointer-events:none;
+    z-index: 3;
+
+    /* brilho suave */
+    filter: drop-shadow(0 0 12px rgba(255,255,255,.18));
+  }
+
+  /* Só acende quando estiver hover em alguma zona */
+  .card:hover .border-glow{ opacity: 1; }
+
+  /* ========= ZONAS INVISÍVEIS (sem JS) =========
+     Elas detectam “onde” o mouse está mais perto.
+  */
+  .zones{ position:absolute; inset:0; z-index: 5; }
+  .zone{ position:absolute; inset:auto; background: transparent; }
+
+  /* Faixas */
+  .z-top{    left:0; top:0; width:100%; height:28%; }
+  .z-bottom{ left:0; bottom:0; width:100%; height:28%; }
+  .z-left{   left:0; top:0; width:18%; height:100%; }
+  .z-right{  right:0; top:0; width:18%; height:100%; }
+
+  /* Cantos (melhora MUITO a sensação) */
+  .z-tl{ left:0; top:0; width:22%; height:35%; }
+  .z-tr{ right:0; top:0; width:22%; height:35%; }
+  .z-bl{ left:0; bottom:0; width:22%; height:35%; }
+  .z-br{ right:0; bottom:0; width:22%; height:35%; }
+
+  /* ========= A MÁGICA: :has() muda o ponto do brilho ========= */
+  .card:has(.z-top:hover)    { --px: 50%; --py: 0%; }
+  .card:has(.z-bottom:hover) { --px: 50%; --py: 100%; }
+  .card:has(.z-left:hover)   { --px: 0%;  --py: 50%; }
+  .card:has(.z-right:hover)  { --px: 100%;--py: 50%; }
+
+  .card:has(.z-tl:hover)     { --px: 0%;  --py: 0%; }
+  .card:has(.z-tr:hover)     { --px: 100%;--py: 0%; }
+  .card:has(.z-bl:hover)     { --px: 0%;  --py: 100%; }
+  .card:has(.z-br:hover)     { --px: 100%;--py: 100%; }
+</style>
+</head>
+
+<body>
+
+  <div class="card">
+    <div class="content">
+      <h2>Janela reativa</h2>
+      <p>A borda clareia só perto do mouse (sem JS).</p>
+    </div>
+
+    <div class="border-base"></div>
+    <div class="border-glow"></div>
+
+    <div class="zones">
+      <!-- faixas -->
+      <div class="zone z-top"></div>
+      <div class="zone z-bottom"></div>
+      <div class="zone z-left"></div>
+      <div class="zone z-right"></div>
+
+      <!-- cantos -->
+      <div class="zone z-tl"></div>
+      <div class="zone z-tr"></div>
+      <div class="zone z-bl"></div>
+      <div class="zone z-br"></div>
+    </div>
+  </div>
+
+</body>
+</html>

@@ -1,0 +1,377 @@
+<!doctype html>
+<html lang="pt-br">
+<head>
+  <meta charset="utf-8" /> <!-- charset: utf-8, iso-8859-1 (etc) -->
+  <meta name="viewport" content="width=device-width, initial-scale=1" /> <!-- content: qualquer string de diretivas -->
+  <title>Pano (massa-mola / cloth) com vento, gravidade e rasgo</title> <!-- title: texto -->
+
+  <style>
+    /* ===== CSS básico (MDN: Canvas + layout fullscreen) ===== */
+
+    :root{
+      --bg: #0b0f1a;          /* cor de fundo */
+      --line: rgba(255,255,255,.25); /* cor da malha */
+      --pin: rgba(255,255,255,.55);  /* pontos presos */
+      --hint: rgba(255,255,255,.8);  /* texto */
+    }
+
+    html, body {
+      width: 100%;  /* width: auto | <length> | <percentage> | min-content | max-content | fit-content() */
+      height: 100%; /* height: auto | <length> | <percentage> */
+      margin: 0;    /* margin: <length> | <percentage> | auto */
+      overflow: hidden; /* overflow: visible | hidden | scroll | auto | clip */
+      background: var(--bg); /* background: cor/gradiente/imagem (shorthand) */
+    }
+
+    canvas {
+      display: block; /* display: block | inline | inline-block | flex | grid | none ... */
+      width: 100vw;   /* width: <length> | <percentage> ... */
+      height: 100vh;  /* height: <length> | <percentage> ... */
+      cursor: grab;   /* cursor: auto | default | pointer | grab | grabbing ... */
+    }
+
+    canvas:active {
+      cursor: grabbing; /* cursor: auto | default | pointer | grab | grabbing ... */
+    }
+
+    .hud{
+      position: fixed; /* position: static | relative | absolute | fixed | sticky */
+      left: 12px;      /* left: auto | <length> | <percentage> */
+      top: 12px;       /* top: auto | <length> | <percentage> */
+      font: 12px/1.35 system-ui, -apple-system, Segoe UI, Roboto, Arial; /* font: shorthand */
+      color: var(--hint); /* color: <color> */
+      user-select: none;  /* user-select: auto | none | text | all */
+      pointer-events: none; /* pointer-events: auto | none ... */
+      opacity: .9; /* opacity: 0..1 */
+    }
+  </style>
+</head>
+
+<body>
+  <div class="hud">
+    <b>Pano (cloth)</b><br/>
+    Arraste devagar = deforma • arraste rápido = rasga<br/>
+    Mova o mouse = vento (depende da velocidade do cursor)
+  </div>
+
+  <canvas id="c"></canvas> <!-- canvas: width/height attrs opcionais -->
+  <script>
+    /* ===== JS (MDN base: CanvasRenderingContext2D + requestAnimationFrame + Pointer Events) ===== */
+
+    const canvas = document.getElementById("c");                  // getElementById(id:string)
+    const ctx = canvas.getContext("2d", { alpha: true });         // contextId: "2d" | "bitmaprenderer" | "webgl" | "webgl2"
+    const DPR = Math.max(1, Math.min(2, window.devicePixelRatio || 1)); // devicePixelRatio: number
+
+    function resize() {
+      const w = Math.floor(window.innerWidth);                    // innerWidth: number
+      const h = Math.floor(window.innerHeight);                   // innerHeight: number
+      canvas.width = Math.floor(w * DPR);                         // canvas.width: number (px reais)
+      canvas.height = Math.floor(h * DPR);                        // canvas.height: number (px reais)
+      canvas.style.width = w + "px";                              // style.width: string
+      canvas.style.height = h + "px";                             // style.height: string
+      ctx.setTransform(DPR, 0, 0, DPR, 0, 0);                     // setTransform(a,b,c,d,e,f) (matriz 2D)
+    }
+    window.addEventListener("resize", resize);                    // addEventListener(type, listener, options?)
+    resize();
+
+    /* ===== Parâmetros da simulação ===== */
+    const GRAVITY = 900;            // px/s^2 (ajuste “peso”)
+    const DAMPING = 0.99;           // 0..1 (perda de energia por frame)
+    const SOLVE_ITERS = 8;          // iterações de restrição por frame
+    const TEAR_DIST = 26;           // distância máxima antes de “romper” um fio
+    const MOUSE_INFLUENCE = 50;     // raio de influência do mouse
+    const WIND_STRENGTH = 1.0;      // multiplicador do “vento”
+    const DRAG_FORCE = 1.2;         // quão forte o arrasto puxa o ponto
+
+    /* ===== Malha (pano) ===== */
+    const cloth = {
+      cols: 52,                      // colunas (mais = mais detalhado)
+      rows: 30,                      // linhas
+      spacing: 14,                   // distância entre pontos
+      originX: 80,                   // posição inicial
+      originY: 60,
+      points: [],                    // lista de pontos
+      sticks: []                     // lista de “fios” (restrições)
+    };
+
+    /* ===== Tipos internos ===== */
+    function makePoint(x, y, pinned=false) {
+      return {
+        x, y,                        // posição atual
+        px: x, py: y,                // posição anterior (Verlet)
+        ax: 0, ay: 0,                // aceleração acumulada
+        pinned                       // preso no lugar?
+      };
+    }
+
+    function makeStick(a, b, length) {
+      return { a, b, length, broken: false };
+    }
+
+    function buildCloth() {
+      cloth.points.length = 0;
+      cloth.sticks.length = 0;
+
+      for (let y = 0; y < cloth.rows; y++) {
+        for (let x = 0; x < cloth.cols; x++) {
+          const px = cloth.originX + x * cloth.spacing;
+          const py = cloth.originY + y * cloth.spacing;
+
+          // prende alguns pontos do topo (como uma cortina)
+          const pinned = (y === 0) && (x % 3 === 0);
+
+          cloth.points.push(makePoint(px, py, pinned));
+
+          // liga com o ponto da esquerda
+          if (x > 0) {
+            const left = cloth.points[cloth.points.length - 2];
+            const cur = cloth.points[cloth.points.length - 1];
+            cloth.sticks.push(makeStick(left, cur, cloth.spacing));
+          }
+
+          // liga com o ponto de cima
+          if (y > 0) {
+            const up = cloth.points[(y - 1) * cloth.cols + x];
+            const cur = cloth.points[cloth.points.length - 1];
+            cloth.sticks.push(makeStick(up, cur, cloth.spacing));
+          }
+        }
+      }
+    }
+    buildCloth();
+
+    /* ===== Mouse / vento ===== */
+    const mouse = {
+      x: 0, y: 0,
+      px: 0, py: 0,
+      vx: 0, vy: 0,
+      down: false,
+      grabbed: null,
+      lastMoveTs: performance.now()
+    };
+
+    function canvasPos(evt) {
+      const rect = canvas.getBoundingClientRect();                // DOMRect
+      return {
+        x: evt.clientX - rect.left,                               // clientX: number
+        y: evt.clientY - rect.top
+      };
+    }
+
+    canvas.addEventListener("pointerdown", (evt) => {
+      const p = canvasPos(evt);
+      mouse.down = true;
+      mouse.x = mouse.px = p.x;
+      mouse.y = mouse.py = p.y;
+
+      // pega o ponto mais próximo dentro de um raio
+      let best = null;
+      let bestD2 = (MOUSE_INFLUENCE * MOUSE_INFLUENCE);
+
+      for (const pt of cloth.points) {
+        const dx = pt.x - mouse.x;
+        const dy = pt.y - mouse.y;
+        const d2 = dx*dx + dy*dy;
+        if (d2 < bestD2) {
+          bestD2 = d2;
+          best = pt;
+        }
+      }
+      mouse.grabbed = best;
+      canvas.setPointerCapture(evt.pointerId);                    // setPointerCapture(pointerId:number)
+    });
+
+    canvas.addEventListener("pointerup", (evt) => {
+      mouse.down = false;
+      mouse.grabbed = null;
+      canvas.releasePointerCapture(evt.pointerId);                // releasePointerCapture(pointerId:number)
+    });
+
+    canvas.addEventListener("pointermove", (evt) => {
+      const p = canvasPos(evt);
+      const now = performance.now();                              // performance.now(): ms (number)
+      const dt = Math.max(0.001, (now - mouse.lastMoveTs) / 1000); // segundos
+      mouse.lastMoveTs = now;
+
+      mouse.px = mouse.x;
+      mouse.py = mouse.y;
+      mouse.x = p.x;
+      mouse.y = p.y;
+
+      mouse.vx = (mouse.x - mouse.px) / dt;                       // velocidade do cursor (px/s)
+      mouse.vy = (mouse.y - mouse.py) / dt;
+    });
+
+    /* ===== Física (Verlet) ===== */
+    function addForce(pt, fx, fy) {
+      pt.ax += fx;                                                // acumula força no eixo x
+      pt.ay += fy;                                                // acumula força no eixo y
+    }
+
+    function verlet(pt, dt) {
+      if (pt.pinned) {                                            // se preso, não mexe
+        pt.ax = 0; pt.ay = 0;
+        pt.px = pt.x; pt.py = pt.y;
+        return;
+      }
+
+      const vx = (pt.x - pt.px) * DAMPING;                        // velocidade implícita (Verlet)
+      const vy = (pt.y - pt.py) * DAMPING;
+
+      const nx = pt.x + vx + pt.ax * dt * dt;                     // integra posição
+      const ny = pt.y + vy + pt.ay * dt * dt;
+
+      pt.px = pt.x;                                               // guarda posição anterior
+      pt.py = pt.y;
+
+      pt.x = nx;                                                  // atualiza posição
+      pt.y = ny;
+
+      pt.ax = 0;                                                  // zera aceleração (próximo frame)
+      pt.ay = 0;
+    }
+
+    function solveStick(s) {
+      if (s.broken) return;
+
+      const ax = s.a.x, ay = s.a.y;
+      const bx = s.b.x, by = s.b.y;
+
+      const dx = bx - ax;
+      const dy = by - ay;
+
+      const dist = Math.hypot(dx, dy) || 0.0001;                  // hypot: sqrt(dx²+dy²)
+      if (dist > TEAR_DIST) {                                     // rasga se esticar demais
+        s.broken = true;
+        return;
+      }
+
+      const diff = (dist - s.length) / dist;                      // quanto precisa corrigir
+      const ox = dx * 0.5 * diff;                                 // offset metade/metade
+      const oy = dy * 0.5 * diff;
+
+      if (!s.a.pinned) { s.a.x += ox; s.a.y += oy; }              // aplica correção no ponto A
+      if (!s.b.pinned) { s.b.x -= ox; s.b.y -= oy; }              // aplica correção no ponto B
+    }
+
+    /* ===== Vento do mouse (depende da velocidade do cursor) ===== */
+    function applyMouseWind(dt) {
+      const speed = Math.hypot(mouse.vx, mouse.vy);               // velocidade do cursor
+      if (speed < 10) return;
+
+      // direção do vento é a direção do movimento do mouse
+      const dirX = mouse.vx / speed;
+      const dirY = mouse.vy / speed;
+
+      for (const pt of cloth.points) {
+        const dx = pt.x - mouse.x;
+        const dy = pt.y - mouse.y;
+        const d = Math.hypot(dx, dy);
+
+        if (d > MOUSE_INFLUENCE) continue;
+
+        // queda suave com a distância (0..1)
+        const falloff = 1 - (d / MOUSE_INFLUENCE);
+
+        // força do vento cresce com a velocidade (limitada)
+        const force = Math.min(2200, speed * 2.0) * falloff * WIND_STRENGTH;
+
+        addForce(pt, dirX * force, dirY * force);                 // aplica “vento”
+      }
+    }
+
+    /* ===== Arrasto e rasgo por puxão ===== */
+    function applyDragging(dt) {
+      if (!mouse.down || !mouse.grabbed) return;
+
+      const pt = mouse.grabbed;
+
+      // “puxa” o ponto em direção ao mouse (tipo uma mão segurando)
+      const dx = mouse.x - pt.x;
+      const dy = mouse.y - pt.y;
+
+      // se puxar rápido, aumenta chance de rasgar (indiretamente, via esticar os sticks)
+      pt.x += dx * Math.min(1, DRAG_FORCE * dt * 12);
+      pt.y += dy * Math.min(1, DRAG_FORCE * dt * 12);
+    }
+
+    /* ===== Render ===== */
+    function draw() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);           // clearRect(x,y,w,h)
+
+      // desenha fios (malha visível)
+      ctx.beginPath();                                            // beginPath()
+      for (const s of cloth.sticks) {
+        if (s.broken) continue;
+        ctx.moveTo(s.a.x, s.a.y);                                 // moveTo(x,y)
+        ctx.lineTo(s.b.x, s.b.y);                                 // lineTo(x,y)
+      }
+      ctx.strokeStyle = "rgba(255,255,255,0.25)";                 // strokeStyle: <color> | gradient | pattern
+      ctx.lineWidth = 1;                                          // lineWidth: number
+      ctx.stroke();                                               // stroke()
+
+      // desenha pontos presos (só pra dar noção)
+      ctx.beginPath();
+      for (const pt of cloth.points) {
+        if (!pt.pinned) continue;
+        ctx.rect(pt.x - 1.5, pt.y - 1.5, 3, 3);                   // rect(x,y,w,h)
+      }
+      ctx.fillStyle = "rgba(255,255,255,0.55)";                   // fillStyle: <color> | gradient | pattern
+      ctx.fill();
+    }
+
+    /* ===== Loop ===== */
+    let last = performance.now();
+    function tick(now) {
+      const dt = Math.min(0.033, (now - last) / 1000);            // limita dt (estabilidade)
+      last = now;
+
+      // forças globais
+      for (const pt of cloth.points) {
+        addForce(pt, 0, GRAVITY);                                 // gravidade (sempre)
+      }
+
+      applyMouseWind(dt);                                         // vento do cursor
+      applyDragging(dt);                                          // arrastar ponto
+
+      // integra
+      for (const pt of cloth.points) {
+        verlet(pt, dt);                                           // Verlet integration
+      }
+
+      // resolve restrições (várias iterações deixa o pano “firme”)
+      for (let i = 0; i < SOLVE_ITERS; i++) {
+        for (const s of cloth.sticks) solveStick(s);
+
+        // limites de tela (evita sumir)
+        const W = window.innerWidth;
+        const H = window.innerHeight;
+        for (const pt of cloth.points) {
+          if (pt.pinned) continue;
+          pt.x = Math.max(0, Math.min(W, pt.x));
+          pt.y = Math.max(0, Math.min(H, pt.y));
+        }
+      }
+
+      draw();                                                     // render
+      requestAnimationFrame(tick);                                // requestAnimationFrame(callback)
+    }
+    requestAnimationFrame(tick);
+
+    /* ===== “Reset” com tecla R (facilita testar rasgo) ===== */
+    window.addEventListener("keydown", (e) => {                   // keydown: KeyboardEvent
+      if (e.key.toLowerCase() === "r") buildCloth();              // key: string
+    });
+
+    /*
+      Referências (base MDN):
+      - CanvasRenderingContext2D: strokeStyle, lineWidth, beginPath, moveTo, lineTo, stroke, clearRect
+      - requestAnimationFrame
+      - Pointer Events: pointerdown/move/up + setPointerCapture
+      - performance.now
+
+      Observação: nomes como "cloth", "stick", "point" são rótulos genéricos (convenção), você pode renomear.
+    */
+  </script>
+</body>
+</html>

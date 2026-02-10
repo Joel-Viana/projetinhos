@@ -1,0 +1,158 @@
+:root{
+    --cor-sombra: #121212;
+    --cor-principal: #1a1a1a;
+    --cor-secundaria: #3b3b3b;
+    --cor-clara: #d1e2e7;
+}
+
+* {
+    margin: 0;
+    border: 0;
+    box-sizing: border-box;
+}
+
+nav {
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+    padding-right: 6vh;
+    font-family: Arial, Helvetica, sans-serif;
+    background-color: var(--cor-sombra);
+    color: var(--cor-clara);
+    height: 8vh;
+}
+
+.nav-list {
+    display: flex;
+    gap: 30px;
+    list-style: none;
+    letter-spacing: 3px;
+    transition: transform 0.3s ease-in,
+    opacity 0.15s ease-in;
+}
+
+.mobile-menu div {
+    pointer-events: none;
+    width: 32px;
+    height: 3px;
+    background-color: var(--cor-clara);
+    margin: 8px;
+    opacity: 0.5;
+    transform: translateX(100px);
+    transition: transform 0.2s ease, opacity 0.3s ease;
+}
+
+/* Faz sumir o menu para telas que não são mobile */
+@media (min-width: 601px) {
+    .mobile-menu {
+        display: none;
+    }
+}
+
+/* Regra para usar no mobile */
+@media (max-width: 600px) {
+    .nav-list {
+        transform: translateX(110vw);
+        pointer-events: none;
+        opacity: 0;
+    }
+    .mobile-menu div {
+        transform: translateX(0px);
+        pointer-events: all;
+    }
+}
+
+.wrapper-mobile-menu {
+     cursor: pointer;
+}
+
+/* Esconde menu gerado pelo input */
+#menu-toggle {
+    position: absolute;
+    opacity: 0;
+    pointer-events: none;
+}
+
+/* Quando checado, pega a label e altera */
+#menu-toggle:checked + label .wrapper-mobile-menu .mobile-menu .line1 {
+    transform:scale(1.25) translateY(9px) rotate(-45deg);
+    opacity: 1;
+}
+
+#menu-toggle:checked + label .wrapper-mobile-menu .mobile-menu .line2 {
+    transform: scale(0.5);
+    opacity: 0;
+}
+
+#menu-toggle:checked + label .wrapper-mobile-menu .mobile-menu .line3 {
+    transform:scale(1.25) translateY(-9px) rotate(45deg);
+    opacity: 1;
+}
+
+
+/* Altera estado do menu quando não checado (no hover) */
+#menu-toggle:not(:checked) + label .mobile-menu:hover div {
+    transform: scale(1.25);
+    opacity: 1;
+}
+
+body {
+    overflow:hidden;
+    background-color: var(--cor-principal);
+}
+
+.tela-login {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+}
+
+.box {
+    position: absolute;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    gap: 10px;
+    padding: 20px;
+
+    width: clamp(250px, 100vw, 350px);
+    height: clamp(100px, 80%, 500px);
+
+    
+    background-color: var(--cor-secundaria);
+    border-radius: 25px;
+    box-shadow: 0 15px 15px -5px var(--cor-sombra),
+    inset 0px 8px 5px 3px #5252521d,
+    inset 0px -30px 15px -10px  #2828286b,
+    inset 0px 2px 5px -3px var(--cor-clara), 
+    inset 0px 2px 5px -3px var(--cor-clara);
+    transition: transform 0.3s ease;
+}
+
+.label-email input,
+.label-senha-email input {
+    position: relative; 
+    appearance: none; 
+    
+    width: clamp(260px, 100%, 100%);
+    height: 100%;
+
+    background-color: rgba(214, 225, 225, 0.374);
+    border-radius: 8px;
+    border:2px solid var(--cor-clara);
+    transition: transform 0.3s ease;
+} 
+
+.box:hover,
+.label-email:hover input,
+.label-senha-email:hover input {
+    transform: scale(1.05);
+}
+
+input::placeholder{
+    color: var(--cor-sombra);
+    font-size: 1em;
+    font-family: 'Gill Sans', 'Gill Sans MT', Calibri, 'Trebuchet MS', sans-serif;
+}

@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bateria</title>
+    <style>
+        *{
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        section {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            background-color: #1a1a1a;
+        }
+        .battery {
+            position: relative;
+            width: 80px;
+            height: 200px;
+            border: 4px outset #fff;
+            border-radius: 15px;
+            padding: 5%;
+        }
+        .battery::after{
+            content: " ";
+            position: absolute;
+            background-color: #fff;
+            width: 26px;
+            height: 10px;
+            top: -14px;
+            left: 50%;
+            transform: translateX(-50%);
+            border-radius: 3px 3px 0 0;
+        }
+        .level {
+            position: absolute;
+            bottom: 5px;
+            left: 5px;
+            right: 5px;
+            top: 100%;
+            background-color: red;
+            border-radius: 0 0 8px 8px;
+            animation: fill-charge 5s ease-in infinite alternate;
+        }
+
+        @keyframes fill-charge{
+            0% {
+                top: 100%;
+                background-color: red;
+            }
+            60%{
+                background-color: yellow;
+            }
+            80% {
+                border-radius: 8px;
+            }
+            100% {
+                border-radius: 8px 8px 8px 8px;
+                top: 0%;
+                background-color: green;
+            }
+        }
+    </style>
+</head>
+<body>
+    <section>
+        <div class="battery">
+            <div class="level"></div>
+        </div>
+    </section>
+</body>
+</html>

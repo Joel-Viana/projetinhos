@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Exemplos UI – Modal, Overlay, Dropdown, Tooltip</title>
+
+<style>
+/* ===============================
+   RESET BÁSICO (layout apenas)
+   =============================== */
+* {
+    margin: 0;                 /* remove margens padrão */
+    box-sizing: border-box;    /* padding não aumenta tamanho */
+}
+
+/* ===============================
+   BASE DA PÁGINA
+   =============================== */
+body {
+    font-family: Arial, sans-serif; /* fonte base */
+    min-height: 100vh;              /* ocupa altura da tela */
+    padding: 2rem;
+    background: #f2f2f2;
+}
+
+/* ===============================
+   TOOLTIP
+   =============================== */
+.tooltip-wrapper {
+    position: relative; /* cria referência para o tooltip */
+    display: inline-block;
+}
+
+.tooltip {
+    position: absolute;        /* sai do fluxo */
+    bottom: 130%;              /* sobe acima do elemento */
+    left: 50%;
+    transform: translateX(-50%);
+    background: black;
+    color: white;
+    padding: 6px 10px;
+    font-size: 0.8rem;
+    white-space: nowrap;       /* não quebra linha */
+    opacity: 0;                /* começa invisível */
+    pointer-events: none;      /* NÃO captura clique */
+    transition: opacity 0.2s;
+}
+
+.tooltip-wrapper:hover .tooltip {
+    opacity: 1;                /* aparece no hover */
+}
+
+/* ===============================
+   DROPDOWN
+   =============================== */
+.dropdown {
+    position: relative;        /* referência do menu */
+    display: inline-block;
+    margin-left: 2rem;
+}
+
+.dropdown-menu {
+    position: absolute;
+    top: 100%;                 /* abaixo do botão */
+    left: 0;
+    background: white;
+    border: 1px solid #ccc;
+    list-style: none;
+    padding: 0.5rem 0;
+    display: none;             /* escondido */
+    z-index: 200;              /* acima do layout */
+}
+
+.dropdown-menu li {
+    padding: 0.5rem 1rem;
+    cursor: pointer;
+}
+
+.dropdown-menu li:hover {
+    background: #eee;
+}
+
+.dropdown:hover .dropdown-menu {
+    display: block;            /* abre no hover */
+}
+
+/* ===============================
+   OVERLAY (base de tudo)
+   =============================== */
+.overlay {
+    position: fixed;           /* preso à tela */
+    inset: 0;                  /* top, right, bottom, left = 0 */
+    background: rgba(0,0,0,0.5);
+    display: none;             /* começa oculto */
+    justify-content: center;   /* centraliza conteúdo */
+    align-items: center;
+    z-index: 100;              /* base das camadas flutuantes */
+}
+
+/* ===============================
+   MODAL
+   =============================== */
+.modal {
+    background: white;
+    padding: 2rem;
+    width: 300px;
+    border-radius: 8px;
+    z-index: 101;              /* acima do overlay */
+}
+
+/* ===============================
+   MENU MOBILE
+   =============================== */
+.menu-mobile {
+    position: fixed;
+    top: 0;
+    right: 0;
+    width: 70%;
+    height: 100%;
+    background: white;
+    padding: 2rem;
+    z-index: 101;
+}
+
+/* ===============================
+   CONTROLES (botões)
+   =============================== */
+button {
+    padding: 0.5rem 1rem;
+    cursor: pointer;
+    margin-top: 1rem;
+}
+</style>
+</head>
+
+<body>
+
+<h1>Exemplos Práticos de UI</h1>
+
+<br><br>
+
+<!-- ===============================
+     TOOLTIP
+     =============================== -->
+<div class="tooltip-wrapper">
+    <button>?</button>
+    <span class="tooltip">
+        Tooltip: dica rápida sem interação
+    </span>
+</div>
+
+<!-- ===============================
+     DROPDOWN
+     =============================== -->
+<div class="dropdown">
+    <button>Dropdown</button>
+    <ul class="dropdown-menu">
+        <li>Editar</li>
+        <li>Excluir</li>
+    </ul>
+</div>
+
+<br><br>
+
+<!-- ===============================
+     BOTÕES PARA ABRIR MODAL / MENU
+     =============================== -->
+<button onclick="abrirModal()">Abrir Modal</button>
+<button onclick="abrirMenu()">Abrir Menu Mobile</button>
+
+<!-- ===============================
+     OVERLAY + MODAL
+     =============================== -->
+<div class="overlay" id="overlayModal" onclick="fecharTudo()">
+    <!-- 
+        IMPORTANTE:
+        clique no overlay fecha
+        clique no modal NÃO fecha
+    -->
+    <div class="modal" onclick="event.stopPropagation()">
+        <p>Isso é um MODAL.</p>
+        <button onclick="fecharTudo()">Fechar</button>
+    </div>
+</div>
+
+<!-- ===============================
+     OVERLAY + MENU MOBILE
+     =============================== -->
+<div class="overlay" id="overlayMenu" onclick="fecharTudo()">
+    <nav class="menu-mobile" onclick="event.stopPropagation()">
+        <p><strong>Menu Mobile</strong></p>
+        <a href="#">Home</a><br><br>
+        <a href="#">Lista</a><br><br>
+        <a href="#">Contato</a><br><br>
+        <button onclick="fecharTudo()">Fechar</button>
+    </nav>
+</div>
+
+<script>
+/* ===============================
+   CONTROLE VIA JS (simples)
+   =============================== */
+function abrirModal() {
+    document.getElementById("overlayModal").style.display = "flex";
+}
+
+function abrirMenu() {
+    document.getElementById("overlayMenu").style.display = "flex";
+}
+
+function fecharTudo() {
+    document.getElementById("overlayModal").style.display = "none";
+    document.getElementById("overlayMenu").style.display = "none";
+}
+</script>
+
+</body>
+</html>

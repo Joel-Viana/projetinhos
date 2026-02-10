@@ -1,0 +1,880 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>CSS Masks (mask-*) — Guia completo</title>
+
+  <style>
+    /* =========================
+       Layout do documento (demo)
+       ========================= */
+    :root {
+      --bg: #0b0c10;
+      --panel: #12141a;
+      --text: #e8e8ea;
+      --muted: #b6b7bd;
+      --border: rgba(255, 255, 255, 0.12);
+      --accent: #76b3ff;
+      --accent2: #a6ffcb;
+      --code: #0f1117;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      padding: 32px;
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+      background: radial-gradient(1200px 900px at 30% -10%, rgba(118, 179, 255, 0.18), transparent 60%),
+        radial-gradient(900px 700px at 80% 10%, rgba(166, 255, 203, 0.12), transparent 60%),
+        var(--bg);
+      color: var(--text);
+    }
+
+    header {
+      max-width: 1100px;
+      margin: 0 auto 28px;
+      padding: 18px 20px;
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      background: rgba(18, 20, 26, 0.7);
+      backdrop-filter: blur(6px);
+      -webkit-backdrop-filter: blur(6px);
+    }
+
+    header h1 {
+      margin: 0 0 6px;
+      font-size: 22px;
+      letter-spacing: 0.3px;
+    }
+
+    header p {
+      margin: 0;
+      color: var(--muted);
+      line-height: 1.4;
+    }
+
+    main {
+      max-width: 1100px;
+      margin: 0 auto;
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 14px;
+    }
+
+    section {
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      background: rgba(18, 20, 26, 0.62);
+      overflow: hidden;
+    }
+
+    section .sec-head {
+      padding: 14px 16px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      gap: 10px;
+      align-items: baseline;
+      flex-wrap: wrap;
+    }
+
+    section .sec-head h2 {
+      margin: 0;
+      font-size: 16px;
+      letter-spacing: 0.2px;
+    }
+
+    section .sec-head span {
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    section .sec-body {
+      padding: 14px 16px;
+      display: grid;
+      grid-template-columns: 1.1fr 0.9fr;
+      gap: 14px;
+    }
+
+    @media (max-width: 920px) {
+      section .sec-body {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .note {
+      padding: 12px 12px;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      background: rgba(15, 17, 23, 0.75);
+      color: var(--muted);
+      line-height: 1.5;
+      font-size: 13px;
+    }
+
+    .k {
+      color: var(--accent);
+      font-weight: 600;
+    }
+
+    .kk {
+      color: var(--accent2);
+      font-weight: 600;
+    }
+
+    pre {
+      margin: 0;
+      padding: 12px;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      background: var(--code);
+      overflow: auto;
+      font-size: 12.5px;
+      line-height: 1.45;
+      color: #d6d7dd;
+    }
+
+    code {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    }
+
+    .demo-wrap {
+      display: grid;
+      gap: 10px;
+      align-content: start;
+    }
+
+    .demo-card {
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      overflow: hidden;
+      background: rgba(15, 17, 23, 0.6);
+    }
+
+    .demo-title {
+      padding: 10px 12px;
+      border-bottom: 1px solid var(--border);
+      font-size: 13px;
+      color: var(--muted);
+    }
+
+    .demo-box {
+      position: relative;
+      height: 170px;
+      display: grid;
+      place-items: center;
+      background:
+        radial-gradient(120px 90px at 30% 40%, rgba(118, 179, 255, 0.35), transparent 70%),
+        radial-gradient(140px 110px at 70% 60%, rgba(166, 255, 203, 0.25), transparent 72%),
+        linear-gradient(135deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.02));
+    }
+
+    .demo-box .label {
+      padding: 10px 12px;
+      border-radius: 999px;
+      border: 1px solid var(--border);
+      background: rgba(0, 0, 0, 0.25);
+      color: #fff;
+      font-size: 13px;
+      letter-spacing: 0.2px;
+    }
+
+    /* =========================
+       DEMOS de MASK (exemplos)
+       ========================= */
+
+    /* Demo 1 — máscara com linear-gradient (fade) */
+    .mask-linear {
+      /* máscara: preto = aparece | transparente = some */
+      mask-image: linear-gradient(to right, black 0%, transparent 100%); /* gradiente da esquerda pra direita */
+      -webkit-mask-image: linear-gradient(to right, black 0%, transparent 100%); /* Safari */
+      mask-repeat: no-repeat; /* evita repetição */
+      -webkit-mask-repeat: no-repeat; /* Safari */
+      mask-size: 100% 100%; /* cobre o elemento */
+      -webkit-mask-size: 100% 100%; /* Safari */
+      /* Valores aceitos:
+         mask-image: none | linear-gradient() | radial-gradient() | conic-gradient() | url()
+         mask-repeat: repeat | repeat-x | repeat-y | no-repeat | space | round
+         mask-size: auto | cover | contain | <length-percentage>{1,2}
+      */
+    }
+
+    /* Demo 2 — máscara com radial-gradient (vinheta circular) */
+    .mask-radial {
+      mask-image: radial-gradient(circle at center, black 55%, transparent 72%); /* centro visível, borda some */
+      -webkit-mask-image: radial-gradient(circle at center, black 55%, transparent 72%); /* Safari */
+      mask-repeat: no-repeat;
+      -webkit-mask-repeat: no-repeat;
+      mask-size: 100% 100%;
+      -webkit-mask-size: 100% 100%;
+      /* Valores aceitos:
+         radial-gradient(): radial-gradient([shape] [size] [at position], color-stops...)
+         shape: circle | ellipse
+         position: keywords (center/top/left/...) ou %/length
+      */
+    }
+
+    /* Demo 3 — máscara com conic-gradient (setores angulares) */
+    .mask-conic {
+      mask-image: conic-gradient(from 0deg at 50% 50%, black 0deg, black 120deg, transparent 160deg, transparent 360deg);
+      -webkit-mask-image: conic-gradient(from 0deg at 50% 50%, black 0deg, black 120deg, transparent 160deg, transparent 360deg);
+      mask-repeat: no-repeat;
+      -webkit-mask-repeat: no-repeat;
+      mask-size: 100% 100%;
+      -webkit-mask-size: 100% 100%;
+      /* Valores aceitos:
+         conic-gradient([from <angle>] [at <position>], <color-stop-list>)
+         <angle>: deg | rad | turn
+         <position>: keywords ou %/length
+      */
+    }
+
+    /* Demo 4 — camadas + mask-composite (spec) */
+    .mask-layers {
+      /* 1ª layer: um fade horizontal
+         2ª layer: um “buraco” circular
+         (exemplo didático: duas máscaras no MESMO elemento) */
+      mask-image:
+        linear-gradient(to right, black 0%, transparent 100%),
+        radial-gradient(circle at 50% 50%, black 0%, black 50%, transparent 56%);
+      -webkit-mask-image:
+        linear-gradient(to right, black 0%, transparent 100%),
+        radial-gradient(circle at 50% 50%, black 0%, black 50%, transparent 56%);
+
+      mask-repeat: no-repeat, no-repeat;
+      -webkit-mask-repeat: no-repeat, no-repeat;
+
+      mask-size: 100% 100%, 100% 100%;
+      -webkit-mask-size: 100% 100%, 100% 100%;
+
+      mask-position: center, center;
+      -webkit-mask-position: center, center;
+
+      /* spec: combina as camadas (intersect = “fica só a interseção”) */
+      mask-composite: intersect;
+
+      /* Observação: Safari/WebKit usa outra propriedade/valores:
+         -webkit-mask-composite: source-in; (equivalência prática comum em muitos casos)
+         (não é 1:1 com o spec em todas as engines/versões) */
+      /* Valores aceitos (spec):
+         mask-composite: add | subtract | intersect | exclude
+      */
+    }
+
+    /* Demo 5 — mask-origin/mask-clip (diferença visual com borda/padding) */
+    .box-model {
+      border: 10px solid rgba(255, 255, 255, 0.12); /* cria border-box visível */
+      padding: 14px; /* cria padding-box visível */
+      border-radius: 16px; /* bordas arredondadas */
+    }
+
+    .mask-origin-clip {
+      /* máscara por imagem (aqui usamos gradiente como exemplo, mas o comportamento é o mesmo) */
+      mask-image: linear-gradient(to bottom, black 0%, transparent 100%); /* topo aparece, baixo some */
+      -webkit-mask-image: linear-gradient(to bottom, black 0%, transparent 100%);
+
+      mask-repeat: no-repeat;
+      -webkit-mask-repeat: no-repeat;
+
+      mask-size: 100% 100%;
+      -webkit-mask-size: 100% 100%;
+
+      mask-position: top left; /* posição da máscara */
+      -webkit-mask-position: top left;
+
+      /* origin: “de onde começa o sistema de referência” da máscara (0,0 e área base) */
+      mask-origin: content-box; /* usa a caixa do conteúdo como referência */
+      -webkit-mask-origin: content-box;
+
+      /* clip: “até onde a máscara pode pintar” (limite de aplicação) */
+      mask-clip: content-box; /* máscara só atua dentro do content-box */
+      -webkit-mask-clip: content-box;
+
+      /* Valores aceitos:
+         mask-origin: border-box | padding-box | content-box
+         mask-clip: border-box | padding-box | content-box | text
+      */
+    }
+
+    /* Demo 6 — “blur em degradê” (backdrop-filter + mask) */
+    .bg-photo {
+      background:
+        url("https://images.unsplash.com/photo-1529156069898-49953e39b3ac?auto=format&fit=crop&w=1600&q=60")
+        center / cover no-repeat;
+      border-radius: 16px;
+    }
+
+    .blur-fade {
+      position: relative; /* base para o overlay */
+      overflow: hidden; /* evita vazamento do overlay */
+      border-radius: 16px;
+      border: 1px solid var(--border);
+    }
+
+    .blur-fade::before {
+      content: ""; /* overlay */
+      position: absolute; /* cobre a área */
+      inset: 0; /* top/right/bottom/left: 0 */
+      pointer-events: none; /* não bloqueia clique */
+
+      backdrop-filter: blur(10px); /* blur no fundo atrás do overlay */
+      -webkit-backdrop-filter: blur(10px); /* Safari */
+
+      background: rgba(255, 255, 255, 0.001); /* “ativa” o backdrop-filter sem cor perceptível */
+
+      /* máscara controla ONDE o blur aparece (degradê do blur, não de cor) */
+      mask-image: linear-gradient(to bottom, black 0%, transparent 70%);
+      -webkit-mask-image: linear-gradient(to bottom, black 0%, transparent 70%);
+
+      mask-repeat: no-repeat;
+      -webkit-mask-repeat: no-repeat;
+
+      mask-size: 100% 100%;
+      -webkit-mask-size: 100% 100%;
+
+      /* Valores aceitos:
+         backdrop-filter: none | blur(px) | brightness() | contrast() | grayscale() | hue-rotate() | invert() | opacity() | saturate() | sepia() | drop-shadow()
+         mask-image: none | gradient() | url()
+      */
+    }
+
+    /* Texto em demos */
+    .demo-box small {
+      display: block;
+      margin-top: 6px;
+      color: var(--muted);
+      font-size: 12px;
+      text-align: center;
+    }
+  </style>
+</head>
+
+<body>
+  <header>
+    <h1>CSS Masks (mask-*) — Guia completo</h1>
+    <p>
+      Máscara controla <span class="k">visibilidade por pixel</span> (alpha/luminância). Ela <span class="kk">não altera layout</span> e
+      não “pinta” cor — ela só decide o que aparece e quanto aparece.
+    </p>
+  </header>
+
+  <main>
+    <!-- =========================
+         Conceitos essenciais
+         ========================= -->
+    <section>
+      <div class="sec-head">
+        <h2>Conceito base: o que é máscara</h2>
+        <span>(máscara ≈ “background da visibilidade”)</span>
+      </div>
+      <div class="sec-body">
+        <div class="note">
+          <p><span class="k">Máscara</span> é uma “película” aplicada ao elemento. Por pixel:</p>
+          <ul>
+            <li><span class="k">alpha alto</span> (preto/1) → o pixel do elemento <span class="k">aparece</span></li>
+            <li><span class="k">alpha baixo</span> (transparente/0) → o pixel do elemento <span class="k">some</span></li>
+            <li><span class="k">meio termo</span> → aparece parcialmente (fade)</li>
+          </ul>
+
+          <p><span class="kk">Importante:</span> máscara não muda o tamanho do elemento. Ele continua ocupando espaço no layout.</p>
+
+          <p><span class="k">Diferença rápida:</span></p>
+          <ul>
+            <li><span class="k">opacity</span> → reduz o elemento inteiro (inclui filhos)</li>
+            <li><span class="k">mask</span> → recorta por pixel (pode ser gradiente/imagem)</li>
+            <li><span class="k">display:none</span> → remove do layout</li>
+          </ul>
+        </div>
+
+        <pre><code>/* Regra mental (memorizar)
+   Máscara controla "ONDE APARECE" e "QUANTO APARECE".
+   Ela não define cor, não define blur, não muda layout. */</code></pre>
+      </div>
+    </section>
+
+    <!-- =========================
+         mask-image
+         ========================= -->
+    <section>
+      <div class="sec-head">
+        <h2>1) mask-image</h2>
+        <span>Define a “fonte” da máscara: gradiente(s) e/ou imagem(ns)</span>
+      </div>
+      <div class="sec-body">
+        <div class="demo-wrap">
+          <div class="demo-card">
+            <div class="demo-title">Demo — linear-gradient (fade)</div>
+            <div class="demo-box mask-linear">
+              <div class="label">mask-image: linear-gradient()</div>
+              <small>Esquerda aparece → direita some</small>
+            </div>
+          </div>
+
+          <div class="demo-card">
+            <div class="demo-title">Demo — radial-gradient (vinheta)</div>
+            <div class="demo-box mask-radial">
+              <div class="label">mask-image: radial-gradient()</div>
+              <small>Centro aparece → bordas somem</small>
+            </div>
+          </div>
+
+          <div class="demo-card">
+            <div class="demo-title">Demo — conic-gradient (angular)</div>
+            <div class="demo-box mask-conic">
+              <div class="label">mask-image: conic-gradient()</div>
+              <small>Cores variam por ângulo (pizza/relógio)</small>
+            </div>
+          </div>
+        </div>
+
+        <pre><code>/* mask-image: define QUAL é a máscara (gradiente ou imagem)
+   - Preto/alpha 1 = visível
+   - Transparente/alpha 0 = invisível */
+
+.element {
+  mask-image: linear-gradient(to right, black 0%, transparent 100%); /* gradiente como máscara */
+  -webkit-mask-image: linear-gradient(to right, black 0%, transparent 100%); /* Safari */
+}
+
+/* Valores aceitos (mask-image):
+   - none
+   - linear-gradient(...)
+   - radial-gradient(...)
+   - conic-gradient(...)
+   - url("mask.svg" | "mask.png")
+   - múltiplas máscaras por camada (separadas por vírgula) */</code></pre>
+      </div>
+    </section>
+
+    <!-- =========================
+         mask-size / position / repeat
+         ========================= -->
+    <section>
+      <div class="sec-head">
+        <h2>2) mask-size / 3) mask-position / 4) mask-repeat</h2>
+        <span>Controlam tamanho, posição e repetição (igual background-*)</span>
+      </div>
+      <div class="sec-body">
+        <div class="note">
+          <p>
+            Essas três propriedades funcionam como as equivalentes de background:
+            <span class="k">mask-size</span> define “quanto” da área a máscara cobre,
+            <span class="k">mask-position</span> define “onde” ela começa,
+            e <span class="k">mask-repeat</span> define se a máscara se repete.
+          </p>
+          <p>
+            Elas são cruciais quando você usa <span class="k">url()</span> (imagem) ou quando
+            quer <span class="k">alinhamento</span> perfeito da máscara.
+          </p>
+        </div>
+
+        <pre><code>.element {
+  mask-image: url("mask.svg");              /* máscara por imagem */
+  -webkit-mask-image: url("mask.svg");      /* Safari */
+
+  mask-size: contain;                       /* tamanho da máscara */
+  -webkit-mask-size: contain;               /* Safari */
+
+  mask-position: center;                    /* posição da máscara */
+  -webkit-mask-position: center;            /* Safari */
+
+  mask-repeat: no-repeat;                   /* repetição da máscara */
+  -webkit-mask-repeat: no-repeat;           /* Safari */
+}
+
+/* Valores aceitos:
+   mask-size:
+   - auto
+   - cover
+   - contain
+   - &lt;length-percentage&gt;{1,2}  (ex: 100% 100%, 200px 120px)
+
+   mask-position:
+   - left | right | top | bottom | center
+   - &lt;percentage&gt; (ex: 50% 0%)
+   - &lt;length&gt; (ex: 12px 40px)
+
+   mask-repeat:
+   - repeat
+   - repeat-x
+   - repeat-y
+   - no-repeat
+   - space
+   - round */</code></pre>
+      </div>
+    </section>
+
+    <!-- =========================
+         mask-mode
+         ========================= -->
+    <section>
+      <div class="sec-head">
+        <h2>5) mask-mode</h2>
+        <span>Define se a máscara usa alpha (transparência) ou luminance (brilho)</span>
+      </div>
+      <div class="sec-body">
+        <div class="note">
+          <p>
+            <span class="k">mask-mode</span> controla como a máscara é “lida”:
+          </p>
+          <ul>
+            <li><span class="k">alpha</span>: usa a transparência do pixel (o mais comum)</li>
+            <li><span class="k">luminance</span>: usa o brilho (preto/branco) como base</li>
+            <li><span class="k">match-source</span>: usa o modo “natural” da fonte (depende do tipo)</li>
+          </ul>
+          <p>
+            Na prática: para gradientes e PNG com transparência, <span class="k">alpha</span> costuma ser o esperado.
+          </p>
+        </div>
+
+        <pre><code>.element {
+  mask-image: url("mask.png");      /* PNG pode ter alpha e/ou brilho */
+  -webkit-mask-image: url("mask.png");
+
+  mask-mode: alpha;                 /* interpreta pela transparência */
+  /* mask-mode: luminance; */       /* interpreta pelo brilho */
+}
+
+/* Valores aceitos:
+   - match-source
+   - alpha
+   - luminance */</code></pre>
+      </div>
+    </section>
+
+    <!-- =========================
+         mask-origin / mask-clip
+         ========================= -->
+    <section>
+      <div class="sec-head">
+        <h2>6) mask-origin e 7) mask-clip</h2>
+        <span>Origin = referência / Clip = limite de aplicação</span>
+      </div>
+      <div class="sec-body">
+        <div class="demo-wrap">
+          <div class="demo-card">
+            <div class="demo-title">Demo — origin/clip usando content-box</div>
+            <div class="demo-box box-model mask-origin-clip">
+              <div class="label">mask-origin / mask-clip</div>
+              <small>Referência e limite mudam com border/padding</small>
+            </div>
+          </div>
+        </div>
+
+        <pre><code>/* mask-origin: define QUAL "caixa" do box-model é a referência
+   para posicionar/dimensionar a máscara (0,0 e área base).
+
+   mask-clip: define ATÉ ONDE a máscara pode "pintar" (limite). */
+
+.element {
+  border: 10px solid transparent;                /* existe border-box */
+  padding: 20px;                                 /* existe padding-box */
+
+  mask-image: linear-gradient(black, transparent);/* máscara gradiente */
+  -webkit-mask-image: linear-gradient(black, transparent);
+
+  mask-origin: content-box;                      /* referência = conteúdo */
+  -webkit-mask-origin: content-box;
+
+  mask-clip: content-box;                        /* aplica só no conteúdo */
+  -webkit-mask-clip: content-box;
+
+  mask-position: top left;                       /* relativo ao origin */
+  -webkit-mask-position: top left;
+
+  mask-size: 100% 100%;                          /* relativo ao origin */
+  -webkit-mask-size: 100% 100%;
+}
+
+/* Valores aceitos:
+   mask-origin:
+   - border-box
+   - padding-box
+   - content-box
+
+   mask-clip:
+   - border-box
+   - padding-box
+   - content-box
+   - text */</code></pre>
+      </div>
+    </section>
+
+    <!-- =========================
+         mask-composite (camadas)
+         ========================= -->
+    <section>
+      <div class="sec-head">
+        <h2>8) mask-composite</h2>
+        <span>Combina múltiplas máscaras (layers) no MESMO elemento</span>
+      </div>
+      <div class="sec-body">
+        <div class="demo-wrap">
+          <div class="demo-card">
+            <div class="demo-title">Demo — duas máscaras + composite</div>
+            <div class="demo-box mask-layers">
+              <div class="label">mask-composite: intersect</div>
+              <small>Combina layers separados por vírgula</small>
+            </div>
+          </div>
+
+          <div class="note">
+            <p><span class="k">Ponto crítico:</span> <span class="k">mask-composite</span> não “junta” máscaras de elementos diferentes.</p>
+            <p>
+              Ele só funciona quando você define <span class="k">múltiplas camadas</span> de máscara no
+              <span class="k">mesmo elemento</span> usando vírgulas:
+            </p>
+            <ul>
+              <li><span class="k">mask-image: layer1, layer2, layer3;</span></li>
+              <li>e então <span class="k">mask-composite</span> define como elas se combinam</li>
+            </ul>
+          </div>
+        </div>
+
+        <pre><code>/* Exemplo: gradient + outro recorte (duas layers) */
+.element {
+  mask-image:
+    linear-gradient(to right, black 0%, transparent 100%),     /* layer 1 */
+    radial-gradient(circle at 50% 50%, black 0%, black 55%, transparent 60%); /* layer 2 */
+  -webkit-mask-image:
+    linear-gradient(to right, black 0%, transparent 100%),
+    radial-gradient(circle at 50% 50%, black 0%, black 55%, transparent 60%);
+
+  mask-repeat: no-repeat, no-repeat;                           /* por layer */
+  -webkit-mask-repeat: no-repeat, no-repeat;
+
+  mask-size: 100% 100%, 100% 100%;                             /* por layer */
+  -webkit-mask-size: 100% 100%, 100% 100%;
+
+  mask-position: center, center;                               /* por layer */
+  -webkit-mask-position: center, center;
+
+  mask-composite: intersect;                                   /* combinação */
+  /* -webkit-mask-composite: source-in; */                     /* Safari: valores diferem */
+}
+
+/* Valores aceitos:
+   mask-composite (spec):
+   - add
+   - subtract
+   - intersect
+   - exclude
+
+   Observação Safari/WebKit:
+   -webkit-mask-composite usa keywords diferentes (comportamento parecido, mas não 1:1). */</code></pre>
+      </div>
+    </section>
+
+    <!-- =========================
+         mask-type (SVG)
+         ========================= -->
+    <section>
+      <div class="sec-head">
+        <h2>9) mask-type</h2>
+        <span>Mais relevante em SVG: define alpha vs luminance</span>
+      </div>
+      <div class="sec-body">
+        <div class="note">
+          <p>
+            <span class="k">mask-type</span> aparece principalmente quando você trabalha com máscaras definidas em SVG.
+            No CSS “do dia a dia”, muitas vezes você nem precisa tocar nisso.
+          </p>
+          <p>
+            Ele define se a máscara do SVG deve ser interpretada por <span class="k">luminância</span> ou por <span class="k">alpha</span>.
+          </p>
+        </div>
+
+        <pre><code>.element {
+  mask-image: url("mask.svg");       /* máscara SVG */
+  -webkit-mask-image: url("mask.svg");
+
+  mask-type: luminance;             /* interpreta brilho no SVG */
+  /* mask-type: alpha; */           /* interpreta transparência no SVG */
+}
+
+/* Valores aceitos:
+   - luminance
+   - alpha */</code></pre>
+      </div>
+    </section>
+
+    <!-- =========================
+         shorthand mask
+         ========================= -->
+    <section>
+      <div class="sec-head">
+        <h2>10) Shorthand: mask</h2>
+        <span>Atalho que agrupa várias propriedades em uma linha</span>
+      </div>
+      <div class="sec-body">
+        <div class="note">
+          <p>
+            <span class="k">mask</span> é shorthand. Ele pode incluir imagem, posição, tamanho e repetição (e mais).
+          </p>
+          <p>
+            Na prática profissional, muitas vezes é melhor usar propriedades separadas quando você quer
+            <span class="k">clareza</span> e <span class="k">manutenção</span>.
+          </p>
+        </div>
+
+        <pre><code>/* shorthand (forma compacta) */
+.element {
+  mask: linear-gradient(to bottom, black 0%, transparent 70%) no-repeat center / 100% 100%;
+  -webkit-mask: linear-gradient(to bottom, black 0%, transparent 70%) no-repeat center / 100% 100%;
+}
+
+/* Componentes comuns dentro do shorthand:
+   - mask-image (gradiente/url)
+   - mask-repeat
+   - mask-position
+   - mask-size (após '/')
+
+   Valores aceitos no shorthand dependem das subpropriedades. */</code></pre>
+      </div>
+    </section>
+
+    <!-- =========================
+         blur em degradê (mask + backdrop-filter)
+         ========================= -->
+    <section>
+      <div class="sec-head">
+        <h2>Exemplo completo: “blur em degradê” (sem degradê de cor)</h2>
+        <span>backdrop-filter aplica blur; mask controla onde ele aparece</span>
+      </div>
+
+      <div class="sec-body">
+        <div class="demo-wrap">
+          <div class="demo-card">
+            <div class="demo-title">Demo — blur que some (topo → baixo)</div>
+            <div class="demo-box blur-fade bg-photo">
+              <div class="label">backdrop-filter + mask</div>
+              <small>Máscara “abre” o blur gradualmente</small>
+            </div>
+          </div>
+
+          <div class="note">
+            <p>
+              <span class="k">Importante:</span> você queria o degradê no <span class="k">blur</span>, não na cor.
+              A técnica correta é:
+            </p>
+            <ol>
+              <li>Aplicar <span class="k">backdrop-filter: blur(...)</span> no overlay</li>
+              <li>Aplicar <span class="k">mask-image: linear-gradient(...)</span> no overlay</li>
+            </ol>
+            <p>
+              Isso faz o blur “sumir” sem você precisar fazer degradê de cor no background.
+            </p>
+          </div>
+        </div>
+
+        <pre><code>.container {
+  position: relative;                  /* base do overlay */
+  overflow: hidden;                    /* não deixa o overlay vazar */
+}
+
+.container::before {
+  content: "";                         /* cria o overlay */
+  position: absolute;                  /* overlay por cima */
+  inset: 0;                            /* cobre tudo */
+  pointer-events: none;                /* não bloqueia clique */
+
+  backdrop-filter: blur(10px);         /* BLUR (uniforme) */
+  -webkit-backdrop-filter: blur(10px); /* Safari */
+
+  background: rgba(255,255,255,0.001); /* ativa o backdrop sem cor perceptível */
+
+  mask-image: linear-gradient(to bottom, black 0%, transparent 70%); /* DEGRADÊ DO BLUR */
+  -webkit-mask-image: linear-gradient(to bottom, black 0%, transparent 70%);
+}
+
+/* Valores aceitos:
+   backdrop-filter:
+   - none
+   - blur(px)
+   - brightness(%)
+   - contrast(%)
+   - grayscale(%)
+   - hue-rotate(deg)
+   - invert(%)
+   - opacity(%)
+   - saturate(%)
+   - sepia(%)
+   - drop-shadow()
+
+   mask-image: none | gradient() | url() */</code></pre>
+      </div>
+    </section>
+
+    <!-- =========================
+         Compatibilidade e dicas
+         ========================= -->
+    <section>
+      <div class="sec-head">
+        <h2>Compatibilidade e prática profissional</h2>
+        <span>prefixos, fallback e consistência</span>
+      </div>
+      <div class="sec-body">
+        <div class="note">
+          <ul>
+            <li><span class="k">Safari:</span> use sempre <span class="k">-webkit-mask-*</span> junto do padrão.</li>
+            <li><span class="k">Firefox:</span> suporte pode variar; teste quando for requisito do projeto.</li>
+            <li><span class="k">Fallback:</span> se máscara não existir, o elemento aparece inteiro (comportamento aceitável em muitos casos).</li>
+            <li><span class="k">Manutenção:</span> prefira propriedades separadas quando estiver ajustando origin/clip/position/size.</li>
+          </ul>
+          <p><span class="kk">Regra para memorizar:</span> Máscara é “background da visibilidade” → pense em background-*</p>
+        </div>
+
+        <pre><code>/* Padrão recomendado (compat):
+.element {
+  mask-image: linear-gradient(black, transparent);        /* padrão */
+  -webkit-mask-image: linear-gradient(black, transparent);/* Safari */
+
+  mask-repeat: no-repeat;
+  -webkit-mask-repeat: no-repeat;
+
+  mask-size: 100% 100%;
+  -webkit-mask-size: 100% 100%;
+
+  mask-position: center;
+  -webkit-mask-position: center;
+} */</code></pre>
+      </div>
+    </section>
+
+    <!-- =========================
+         Resumo final
+         ========================= -->
+    <section>
+      <div class="sec-head">
+        <h2>Resumo final (o que cada coisa faz)</h2>
+        <span>para bater o olho e lembrar</span>
+      </div>
+      <div class="sec-body">
+        <div class="note">
+          <ul>
+            <li><span class="k">mask-image</span>: define a máscara (gradiente/imagem) e suas camadas</li>
+            <li><span class="k">mask-size</span>: define o tamanho da máscara (auto/cover/contain/medidas)</li>
+            <li><span class="k">mask-position</span>: define a posição da máscara (center/%/px)</li>
+            <li><span class="k">mask-repeat</span>: define repetição (repeat/no-repeat/space/round)</li>
+            <li><span class="k">mask-mode</span>: como interpretar (alpha/luminance)</li>
+            <li><span class="k">mask-origin</span>: referência (border/padding/content box)</li>
+            <li><span class="k">mask-clip</span>: limite de aplicação (border/padding/content/text)</li>
+            <li><span class="k">mask-composite</span>: combina layers no mesmo elemento (add/subtract/intersect/exclude)</li>
+            <li><span class="k">mask-type</span>: (mais SVG) alpha vs luminance</li>
+            <li><span class="k">mask</span>: shorthand</li>
+          </ul>
+        </div>
+
+        <pre><code>/* Resposta estilo prova:
+   Máscara (mask-*) controla visibilidade por pixel usando alpha/luminância,
+   com propriedades muito parecidas com background-*. */</code></pre>
+      </div>
+    </section>
+  </main>
+</body>
+
+</html>
